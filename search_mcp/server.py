@@ -2,11 +2,12 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any, Literal, cast
+from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
 from mcp import ServerSession
 from mcp.server.fastmcp import Context, FastMCP
+from pydantic import Field
 
 from search_mcp.data import CANDIDATES
 from search_mcp.store import CandidateRepository, InMemoryCandidateRepository
@@ -35,7 +36,9 @@ mcp = FastMCP("candidate-search", lifespan=app_lifespan)
 
 @mcp.tool()
 async def search_candidates(
-    query: str, ctx: Context[ServerSession, AppContext], limit: int = 5
+    query: str,
+    ctx: Context[ServerSession, AppContext],
+    limit: Annotated[int, Field(ge=1, le=50)] = 5,
 ) -> list[dict[str, Any]]:
     """Find candidates by skills.
 
