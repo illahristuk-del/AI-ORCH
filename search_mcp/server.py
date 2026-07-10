@@ -1,18 +1,42 @@
+import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import Any, Literal, cast
 from uuid import UUID
-from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp import ServerSession
+from mcp.server.fastmcp import Context, FastMCP
 
 from search_mcp.data import CANDIDATES
-from search_mcp.store import InMemoryCandidateRepository
+from search_mcp.store import CandidateRepository, InMemoryCandidateRepository
 
-mcp = FastMCP("candidate-search")
 
-_repo = InMemoryCandidateRepository(CANDIDATES)
+@dataclass
+class AppContext:
+    repo: CandidateRepository
+
+
+_app_ctx: AppContext | None = None
+
+
+@asynccontextmanager
+async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
+    global _app_ctx
+    _app_ctx = AppContext(repo=InMemoryCandidateRepository(CANDIDATES))
+    try:
+        yield _app_ctx
+    finally:
+        _app_ctx = None
+
+
+mcp = FastMCP("candidate-search", lifespan=app_lifespan)
 
 
 @mcp.tool()
-async def search_candidates(query: str, limit: int = 5) -> list[dict[str, Any]]:
+async def search_candidates(
+    query: str, ctx: Context[ServerSession, AppContext], limit: int = 5
+) -> list[dict[str, Any]]:
     """Find candidates by skills.
 
     Args:
@@ -25,10 +49,9 @@ async def search_candidates(query: str, limit: int = 5) -> list[dict[str, Any]]:
         Empty list if there are no matches.
     """
 
-    results = await _repo.search(query, limit)
+    repo = ctx.request_context.lifespan_context.repo
 
-    if results == []:
-        print("Nobody found")
+    results = await repo.search(query, limit)
 
     return [c.model_dump(mode="json") for c in results]
 
@@ -40,20 +63,27 @@ async def get_candidate(candidate_id: str) -> str:
     The ID is obtained from the `search_candidates` results.
     """
 
+    if _app_ctx is None:
+        return "Server is not initialized"
+
     try:
         parsed_id = UUID(candidate_id)
     except ValueError:
         return f"Invalid candidate id: {candidate_id}"
 
-    result = await _repo.get(parsed_id)
+    result = await _app_ctx.repo.get(parsed_id)
 
     if result is None:
         return (
-            f"Candidate with ID {candidate_id} not found."
+            f"Candidate with ID {candidate_id} not found. "
             "Use search_candidates to get current IDs."
         )
     return result.model_dump_json()
 
 
 if __name__ == "__main__":
-    mcp.run()
+    raw = os.getenv("MCP_TRANSPORT", "stdio")
+    if raw not in ("stdio", "streamable-http"):
+        raise SystemExit(f"Unknown transport: {raw}")
+    transport = cast(Literal["stdio", "streamable-http"], raw)
+    mcp.run(transport=transport)
