@@ -10,13 +10,11 @@ from fastapi import FastAPI
 
 from hr_agent.card import AGENT_CARD
 from hr_agent.executor import HRRecruiterExecutor
-from search_mcp.data import CANDIDATES
-from search_mcp.store import InMemoryCandidateRepository
+from search_mcp.adapters.config import settings
 
 
 def main() -> None:
-    repo = InMemoryCandidateRepository(CANDIDATES)
-    executor = HRRecruiterExecutor(repo)
+    executor = HRRecruiterExecutor(settings.mcp_url, settings.anthropic_api_key)
     handler = DefaultRequestHandler(
         agent_executor=executor,
         task_store=InMemoryTaskStore(),

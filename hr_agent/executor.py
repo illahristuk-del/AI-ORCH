@@ -1,21 +1,24 @@
 import json
 
+from anthropic import AsyncAnthropic
+from anthropic.types import ToolUseBlock, MessageParam, ToolParam, TextBlock
+
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import Part
-
-from search_mcp.store import CandidateRepository
+from mcp import ClientSession
+from mcp.client.streamable_http import streamable_http_client
 
 LIMIT = 5
 
 
 class HRRecruiterExecutor(AgentExecutor):
-    def __init__(self, repo: CandidateRepository) -> None:
-        self._repo = repo
+    def __init__(self, mcp_url: str, anthropic_api_key: str) -> None:
+        self._mcp_url = mcp_url
+        self._anthropic_api_key = anthropic_api_key
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        print("INCOMING")
         print("current_task:", context.current_task)
         print("task_id:", context.task_id)
         print("context_id:", context.context_id)
@@ -27,11 +30,87 @@ class HRRecruiterExecutor(AgentExecutor):
 
         try:
             query = context.get_user_input()
-            results = await self._repo.search(query, LIMIT)
+            # async with streamable_http_client(self._mcp_url) as (read, write, _):
+            # async with ClientSession(read, write) as session:
+            #    await session.initialize()
+            #    results = await session.call_tool(
+            #        "search_candidates", {"query": query, "limit": LIMIT}
+            #        )
+            # part = Part()
+            # part.text = json.dumps(results.structuredContent)
+
+            tools: list[ToolParam] = [
+                {
+                    "name": "search_candidates",
+                    "description": "Search for candidates by their technical skills.",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "space-separated skills",
+                            },
+                            "limit": {
+                                "type": "integer",
+                                "description": "max candidates",
+                            },
+                        },
+                        "required": ["query"],
+                    },
+                }
+            ]
+
+            messages: list[MessageParam] = [{"role": "user", "content": query}]
+
+            client = AsyncAnthropic(api_key=self._anthropic_api_key)
+            response = await client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=1024,
+                messages=messages,
+                tools=tools,
+            )
+
+            print("STOP_REASON:", response.stop_reason)
+            print("CONTENT:", response.content)
+
+            messages.append({"role": "assistant", "content": response.content})
+
+            for block in response.content:
+                if isinstance(block, ToolUseBlock):
+                    async with streamable_http_client(self._mcp_url) as (read, write, _):
+                        async with ClientSession(read, write) as session:
+                            await session.initialize()
+                            result = await session.call_tool(block.name, block.input) 
+                            messages.append({
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "type": "tool_result",
+                                        "tool_use_id": block.id,
+                                        "content": json.dumps(result.structuredContent)
+                                    }
+                                ]
+                            })
+            
+            final = await client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=1024,
+                messages=messages,
+                tools=tools,
+            )
+
+            print("FINAL STOP: ", final.stop_reason)
+            print("FINAL CONTENT: ", final.content)
+
+            final_text = "".join(
+                block.text for block in final.content if isinstance(block, TextBlock)
+            )
+
             part = Part()
-            part.text = json.dumps([c.model_dump(mode="json") for c in results])
+            part.text = final_text
             await updater.add_artifact([part], name="candidates")
             await updater.complete()
+
         except Exception as e:
             error_part = Part()
             error_part.text = f"Search failed: {e}"

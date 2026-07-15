@@ -8,9 +8,11 @@ from uuid import UUID
 from mcp import ServerSession
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
+from sqlalchemy.ext.asyncio import AsyncEngine
 
-from search_mcp.data import CANDIDATES
-from search_mcp.store import CandidateRepository, InMemoryCandidateRepository
+from search_mcp.adapters.db import make_engine, make_session_factory
+from search_mcp.adapters.postgres import PostgresCandidateRepository
+from search_mcp.store import CandidateRepository
 
 
 @dataclass
@@ -24,11 +26,15 @@ _app_ctx: AppContext | None = None
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     global _app_ctx
-    _app_ctx = AppContext(repo=InMemoryCandidateRepository(CANDIDATES))
-    try:
-        yield _app_ctx
-    finally:
-        _app_ctx = None
+    engine: AsyncEngine = make_engine()
+    session_factory = make_session_factory(engine)
+    async with session_factory() as session:
+        _app_ctx = AppContext(repo=PostgresCandidateRepository(session))
+        try:
+            yield _app_ctx
+        finally:
+            _app_ctx = None
+    await engine.dispose()
 
 
 mcp = FastMCP("candidate-search", lifespan=app_lifespan)
