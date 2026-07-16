@@ -10,6 +10,8 @@ from alembic import context
 from search_mcp.adapters.config import settings
 from search_mcp.adapters.db import Base
 from search_mcp.adapters import orm
+from calendar_mcp.adapters import orm as calendar_orm
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
