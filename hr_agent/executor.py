@@ -77,21 +77,29 @@ class HRRecruiterExecutor(AgentExecutor):
 
             for block in response.content:
                 if isinstance(block, ToolUseBlock):
-                    async with streamable_http_client(self._mcp_url) as (read, write, _):
+                    async with streamable_http_client(self._mcp_url) as (
+                        read,
+                        write,
+                        _,
+                    ):
                         async with ClientSession(read, write) as session:
                             await session.initialize()
-                            result = await session.call_tool(block.name, block.input) 
-                            messages.append({
-                                "role": "user",
-                                "content": [
-                                    {
-                                        "type": "tool_result",
-                                        "tool_use_id": block.id,
-                                        "content": json.dumps(result.structuredContent)
-                                    }
-                                ]
-                            })
-            
+                            result = await session.call_tool(block.name, block.input)
+                            messages.append(
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {
+                                            "type": "tool_result",
+                                            "tool_use_id": block.id,
+                                            "content": json.dumps(
+                                                result.structuredContent
+                                            ),
+                                        }
+                                    ],
+                                }
+                            )
+
             final = await client.messages.create(
                 model="claude-sonnet-4-6",
                 max_tokens=1024,

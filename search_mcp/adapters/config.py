@@ -11,9 +11,12 @@ class Settings(BaseSettings):
     db_pass: str
 
     mcp_url: str = "http://localhost:8000/mcp"
+    calendar_mcp_url: str
 
     anthropic_api_key: str
-    calendar_mcp_url: str
+
+    hr_agent_url: str
+    calendar_agent_url: str
 
     @property
     def db_url(self) -> str:

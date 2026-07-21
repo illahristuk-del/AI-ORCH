@@ -9,7 +9,7 @@ from a2a.types import Message, Part, Role, SendMessageRequest
 async def main() -> None:
     try:
         http = httpx.AsyncClient(timeout=60)
-        config=ClientConfig(httpx_client=http)
+        config = ClientConfig(httpx_client=http)
         client = await create_client(
             "http://localhost:9999/",
             client_config=config,
@@ -34,5 +34,6 @@ async def main() -> None:
         print("DATA:", getattr(e, "data", None))
     finally:
         await http.aclose()
+
 
 asyncio.run(main())

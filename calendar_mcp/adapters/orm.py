@@ -16,6 +16,6 @@ class InterviewOrmModel(Base):
     )
     candidate_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("candidates.id"), nullable=False
-        )
+    )
     scheduled_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     status: Mapped[str] = mapped_column(String(15), nullable=False)

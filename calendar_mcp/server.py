@@ -14,13 +14,16 @@ from search_mcp.adapters.db import make_engine, make_session_factory
 from calendar_mcp.adapters.postgres import PostgresCalendarRepository
 from calendar_mcp.store import CalendarRepository
 from calendar_mcp.models import Interview
-from search_mcp.adapters import orm 
+from search_mcp.adapters import orm
+
 
 @dataclass
 class AppContext:
     repo: CalendarRepository
 
+
 _app_ctx: AppContext | None = None
+
 
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
@@ -35,7 +38,9 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
             _app_ctx = None
     await engine.dispose()
 
+
 mcp = FastMCP("calendar", lifespan=app_lifespan, port=8001)
+
 
 @mcp.tool()
 async def book_interview(
@@ -49,17 +54,18 @@ async def book_interview(
         cid = UUID(candidate_id)
     except ValueError:
         return f"Invalid candidate id: {candidate_id}"
-    
-    try: 
+
+    try:
         when = datetime.fromisoformat(scheduled_at)
     except ValueError:
         return f"Invalid date: {scheduled_at}"
-    
+
     interview = Interview(candidate_id=cid, scheduled_at=when)
 
     booked = await repo.book(interview)
 
     return f"Interview booked: candidate {booked.candidate_id}, date: {booked.scheduled_at}"
+
 
 if __name__ == "__main__":
     raw = os.getenv("MCP_TRANSPORT", "stdio")

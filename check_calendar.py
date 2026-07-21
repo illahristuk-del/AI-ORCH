@@ -11,12 +11,12 @@ async def main() -> None:
         http = httpx.AsyncClient(timeout=60)
         config = ClientConfig(httpx_client=http)
         client = await create_client(
-            "http://localhost:10000/",        
+            "http://localhost:10000/",
             client_config=config,
         )
 
         part = Part()
-        part.text = (                          
+        part.text = (
             "book an interview for candidate "
             "cf7ca699-a667-4e00-bc46-5016f889c336 on 2026-09-01 at 15:00"
         )
