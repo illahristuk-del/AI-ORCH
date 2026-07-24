@@ -7,17 +7,15 @@ from a2a.server.tasks import TaskUpdater
 from a2a.types import Part
 
 from orchestrator.client import ask_agent
+from orchestrator.registry_client import fetch_agents
 
 from typing import cast
 
 
 class OrchestratorExecutor(AgentExecutor):
-    def __init__(
-        self, anthropic_api_key: str, hr_agent_url: str, calendar_agent_url: str
-    ) -> None:
+    def __init__(self, anthropic_api_key: str, registry_url: str) -> None:
         self._anthropic_api_key = anthropic_api_key
-        self._hr_agent_url = hr_agent_url
-        self._calendar_agent_url = calendar_agent_url
+        self._registry_url = registry_url
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         if context.task_id is None or context.context_id is None:
@@ -28,43 +26,26 @@ class OrchestratorExecutor(AgentExecutor):
         query = context.get_user_input()
 
         try:
+            agents = await fetch_agents(self._registry_url)
             tools: list[ToolParam] = [
                 {
-                    "name": "ask_hr_agent",
-                    "description": "Search candidates by skills. Returns candidates WITH their IDs. Does NOT book interviews. "
-                    "Returns IDs, does NOT book.",
+                    "name": f"ask_{agent['name']}",
+                    "description": agent["description"],
                     "input_schema": {
                         "type": "object",
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "what to search, e.g. 'python developers with sql'",
+                                "description": "the task for this agent, in plain text",
                             },
                         },
                         "required": ["query"],
                     },
-                },
-                {
-                    "name": "ask_calendar_agent",
-                    "description": "Book an interview for a candidate at a given time. Does NOT search candidates. "
-                    "Needs the candidate ID and datetime in the query.",
-                    "input_schema": {
-                        "type": "object",
-                        "properties": {
-                            "query": {
-                                "type": "string",
-                                "description": "booking task, e.g. 'book candidate cf7ca699 on 2026-09-01 at 15:00'",
-                            },
-                        },
-                        "required": ["query"],
-                    },
-                },
+                }
+                for agent in agents
             ]
 
-            agent_urls = {
-                "ask_hr_agent": self._hr_agent_url,
-                "ask_calendar_agent": self._calendar_agent_url,
-            }
+            agent_urls = {f"ask_{agent['name']}": agent["url"] for agent in agents}
 
             messages: list[MessageParam] = [{"role": "user", "content": query}]
             client = AsyncAnthropic(api_key=self._anthropic_api_key)
@@ -110,6 +91,9 @@ class OrchestratorExecutor(AgentExecutor):
             await updater.add_artifact([part], name="orchestration_result")
             await updater.complete()
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()
             error_part = Part()
             error_part.text = f"Process failed: {e}"
             message = updater.new_agent_message([error_part])

@@ -16,8 +16,7 @@ from search_mcp.adapters.config import settings
 def main() -> None:
     executor = OrchestratorExecutor(
         settings.anthropic_api_key,
-        settings.hr_agent_url,
-        settings.calendar_agent_url,
+        settings.registry_url,
     )
 
     handler = DefaultRequestHandler(

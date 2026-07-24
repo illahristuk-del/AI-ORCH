@@ -10,8 +10,6 @@ from a2a.types import Part
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-LIMIT = 5
-
 
 class HRRecruiterExecutor(AgentExecutor):
     def __init__(self, mcp_url: str, anthropic_api_key: str) -> None:
@@ -30,14 +28,6 @@ class HRRecruiterExecutor(AgentExecutor):
 
         try:
             query = context.get_user_input()
-            # async with streamable_http_client(self._mcp_url) as (read, write, _):
-            # async with ClientSession(read, write) as session:
-            #    await session.initialize()
-            #    results = await session.call_tool(
-            #        "search_candidates", {"query": query, "limit": LIMIT}
-            #        )
-            # part = Part()
-            # part.text = json.dumps(results.structuredContent)
 
             tools: list[ToolParam] = [
                 {
@@ -68,6 +58,7 @@ class HRRecruiterExecutor(AgentExecutor):
                 max_tokens=1024,
                 messages=messages,
                 tools=tools,
+                system="Always include each candidate's full UUID in your answer. Downstream agents need the ID to book interviews.",
             )
 
             print("STOP_REASON:", response.stop_reason)
@@ -75,37 +66,43 @@ class HRRecruiterExecutor(AgentExecutor):
 
             messages.append({"role": "assistant", "content": response.content})
 
-            for block in response.content:
-                if isinstance(block, ToolUseBlock):
-                    async with streamable_http_client(self._mcp_url) as (
-                        read,
-                        write,
-                        _,
-                    ):
-                        async with ClientSession(read, write) as session:
-                            await session.initialize()
-                            result = await session.call_tool(block.name, block.input)
-                            messages.append(
-                                {
-                                    "role": "user",
-                                    "content": [
-                                        {
-                                            "type": "tool_result",
-                                            "tool_use_id": block.id,
-                                            "content": json.dumps(
-                                                result.structuredContent
-                                            ),
-                                        }
-                                    ],
-                                }
-                            )
+            if response.stop_reason != "tool_use":
+                final = response
+            else:
+                for block in response.content:
+                    if isinstance(block, ToolUseBlock):
+                        async with streamable_http_client(self._mcp_url) as (
+                            read,
+                            write,
+                            _,
+                        ):
+                            async with ClientSession(read, write) as session:
+                                await session.initialize()
+                                result = await session.call_tool(
+                                    block.name, block.input
+                                )
+                                messages.append(
+                                    {
+                                        "role": "user",
+                                        "content": [
+                                            {
+                                                "type": "tool_result",
+                                                "tool_use_id": block.id,
+                                                "content": json.dumps(
+                                                    result.structuredContent
+                                                ),
+                                            }
+                                        ],
+                                    }
+                                )
 
-            final = await client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=1024,
-                messages=messages,
-                tools=tools,
-            )
+                final = await client.messages.create(
+                    model="claude-sonnet-4-6",
+                    max_tokens=1024,
+                    messages=messages,
+                    tools=tools,
+                    system="Always include each candidate's full UUID in your answer. Downstream agents need the ID to book interviews.",
+                )
 
             print("FINAL STOP: ", final.stop_reason)
             print("FINAL CONTENT: ", final.content)
@@ -120,6 +117,9 @@ class HRRecruiterExecutor(AgentExecutor):
             await updater.complete()
 
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()
             error_part = Part()
             error_part.text = f"Search failed: {e}"
             message = updater.new_agent_message([error_part])

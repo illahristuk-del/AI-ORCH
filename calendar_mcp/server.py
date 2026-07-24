@@ -60,7 +60,10 @@ async def book_interview(
     except ValueError:
         return f"Invalid date: {scheduled_at}"
 
-    interview = Interview(candidate_id=cid, scheduled_at=when)
+    try:
+        interview = Interview(candidate_id=cid, scheduled_at=when)
+    except ValueError as e:
+        return f"Cannot book {e}"
 
     booked = await repo.book(interview)
 

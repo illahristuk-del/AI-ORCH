@@ -1,6 +1,8 @@
 from a2a.types import AgentCapabilities, AgentCard, AgentInterface, AgentSkill
 from a2a.utils import TransportProtocol
 
+AGENT_ID = "11111111-1111-1111-1111-111111111111"
+
 SEARCH_SKILL = AgentSkill(
     id="search_candidates",
     name="Candidate search",

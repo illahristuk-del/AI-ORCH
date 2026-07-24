@@ -64,37 +64,42 @@ class CalendarBooker(AgentExecutor):
 
             messages.append({"role": "assistant", "content": response.content})
 
-            for block in response.content:
-                if isinstance(block, ToolUseBlock):
-                    async with streamable_http_client(self.calendar_mcp_url) as (
-                        read,
-                        write,
-                        _,
-                    ):
-                        async with ClientSession(read, write) as session:
-                            await session.initialize()
-                            result = await session.call_tool(block.name, block.input)
-                            messages.append(
-                                {
-                                    "role": "user",
-                                    "content": [
-                                        {
-                                            "type": "tool_result",
-                                            "tool_use_id": block.id,
-                                            "content": json.dumps(
-                                                result.structuredContent
-                                            ),
-                                        }
-                                    ],
-                                }
-                            )
+            if response.stop_reason != "tool_use":
+                final_result = response
+            else:
+                for block in response.content:
+                    if isinstance(block, ToolUseBlock):
+                        async with streamable_http_client(self.calendar_mcp_url) as (
+                            read,
+                            write,
+                            _,
+                        ):
+                            async with ClientSession(read, write) as session:
+                                await session.initialize()
+                                result = await session.call_tool(
+                                    block.name, block.input
+                                )
+                                messages.append(
+                                    {
+                                        "role": "user",
+                                        "content": [
+                                            {
+                                                "type": "tool_result",
+                                                "tool_use_id": block.id,
+                                                "content": json.dumps(
+                                                    result.structuredContent
+                                                ),
+                                            }
+                                        ],
+                                    }
+                                )
 
-            final_result = await client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=1024,
-                messages=messages,
-                tools=tools,
-            )
+                final_result = await client.messages.create(
+                    model="claude-sonnet-4-6",
+                    max_tokens=1024,
+                    messages=messages,
+                    tools=tools,
+                )
 
             print("FINAL STOP:", final_result.stop_reason)
             print("FINAL CONTENT:", final_result.content)
@@ -110,6 +115,9 @@ class CalendarBooker(AgentExecutor):
             await updater.add_artifact([part], name="interview")
             await updater.complete()
         except Exception as e:
+            import traceback
+
+            traceback.print_exc()
             error_part = Part()
             error_part.text = f"Booking failed: {e}"
             message = updater.new_agent_message([error_part])

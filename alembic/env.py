@@ -11,6 +11,7 @@ from search_mcp.adapters.config import settings
 from search_mcp.adapters.db import Base
 from search_mcp.adapters import orm
 from calendar_mcp.adapters import orm as calendar_orm
+from registry.adapters import orm as agent_orm
 
 
 # this is the Alembic Config object, which provides

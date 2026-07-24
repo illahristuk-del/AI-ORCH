@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     hr_agent_url: str
     calendar_agent_url: str
 
+    registry_url: str
+
     @property
     def db_url(self) -> str:
         return (
