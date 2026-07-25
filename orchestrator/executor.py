@@ -1,15 +1,14 @@
-from anthropic import AsyncAnthropic
-from anthropic.types import MessageParam, TextBlock, ToolParam, ToolUseBlock
+from typing import cast
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import Part
+from anthropic import AsyncAnthropic
+from anthropic.types import MessageParam, TextBlock, ToolParam, ToolUseBlock
 
 from orchestrator.client import ask_agent
 from orchestrator.registry_client import fetch_agents
-
-from typing import cast
 
 
 class OrchestratorExecutor(AgentExecutor):

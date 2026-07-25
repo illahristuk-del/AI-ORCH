@@ -1,9 +1,10 @@
-import pytest
 from collections.abc import AsyncIterator
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from search_mcp.adapters.db import Base, make_engine, make_session_factory
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from registry.models import Agent
+from search_mcp.adapters.db import Base, make_engine, make_session_factory
 
 TEST_DB_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/ai_orch_test"
 

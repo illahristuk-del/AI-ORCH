@@ -2,9 +2,9 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from registry.adapters.orm import AgentOrmModel
 from registry.adapters.postgres import PostgresAgentRepository
 from registry.models import Agent, AgentUpdate
-from registry.adapters.orm import AgentOrmModel
 
 
 async def _seed(session: AsyncSession, *agents: Agent) -> None:

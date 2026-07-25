@@ -1,15 +1,21 @@
 import os
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Annotated, Any, Literal, cast
+from typing import Annotated, Any
 from uuid import UUID
 
+import uvicorn
 from mcp import ServerSession
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncEngine
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 
+from search_mcp.adapters.config import settings
 from search_mcp.adapters.db import make_engine, make_session_factory
 from search_mcp.adapters.postgres import PostgresCandidateRepository
 from search_mcp.store import CandidateRepository
@@ -39,6 +45,12 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 
 mcp = FastMCP("candidate-search", lifespan=app_lifespan)
 
+async def check_token(request: Request, call_next: Any) -> Response:
+    expected = f"Bearer {settings.agent_token}"
+    if not secrets.compare_digest(request.headers.get("authorization", ""), expected):
+        return JSONResponse(status_code=401, content={"detail": "Invalid token or missing token"})
+    response: Response = await call_next(request)
+    return response
 
 @mcp.tool()
 async def search_candidates(
@@ -94,5 +106,12 @@ if __name__ == "__main__":
     raw = os.getenv("MCP_TRANSPORT", "stdio")
     if raw not in ("stdio", "streamable-http"):
         raise SystemExit(f"Unknown transport: {raw}")
-    transport = cast(Literal["stdio", "streamable-http"], raw)
-    mcp.run(transport=transport)
+
+    if raw == "stdio":
+        mcp.run(transport="stdio")
+    else:
+        app = mcp.streamable_http_app()
+
+        app.add_middleware(BaseHTTPMiddleware, dispatch=check_token)
+
+        uvicorn.run(app, host="127.0.0.1", port=8000)

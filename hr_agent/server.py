@@ -1,7 +1,10 @@
-import uvicorn
-import httpx
 import secrets
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from typing import Any
 
+import httpx
+import uvicorn
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.routes import (
     add_a2a_routes_to_fastapi,
@@ -10,12 +13,9 @@ from a2a.server.routes import (
 )
 from a2a.server.tasks import InMemoryTaskStore
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
-from contextlib import asynccontextmanager
-from collections.abc import AsyncIterator
-
-from hr_agent.card import AGENT_CARD, SEARCH_SKILL, AGENT_ID
+from hr_agent.card import AGENT_CARD, AGENT_ID, SEARCH_SKILL
 from hr_agent.executor import HRRecruiterExecutor
 from search_mcp.adapters.config import settings
 
@@ -51,15 +51,17 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.middleware("http")
-async def check_token(request: Request, call_next):
+async def check_token(request: Request, call_next: Any) -> Response:
     if request.url.path == "/.well-known/agent-card.json":
-        return await call_next(request)
+        response: Response = await call_next(request)
+        return response
     expected = f"Bearer {settings.agent_token}"
     if not secrets.compare_digest(request.headers.get("authorization", ""), expected):
         return JSONResponse(
             status_code=401, content={"detail": "Invalid token or missing token"}
         )
-    return await call_next(request)
+    response = await call_next(request)
+    return response
 
 
 def main() -> None:

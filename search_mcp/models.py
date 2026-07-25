@@ -1,6 +1,5 @@
 from typing import Annotated
 from uuid import UUID, uuid4
-from datetime import datetime
 
 from annotated_types import Len
 from pydantic import BaseModel, ConfigDict, Field

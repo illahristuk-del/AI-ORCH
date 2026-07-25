@@ -2,9 +2,9 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from search_mcp.models import Candidate
 from search_mcp.adapters.orm import CandidateOrmModel
 from search_mcp.adapters.postgres import PostgresCandidateRepository
+from search_mcp.models import Candidate
 
 
 async def _seed(session: AsyncSession, *candidates: Candidate) -> None:

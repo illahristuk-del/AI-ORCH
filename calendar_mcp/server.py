@@ -1,20 +1,25 @@
 import os
-from datetime import datetime
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any
 from uuid import UUID
-from typing import Literal, cast
 
+import uvicorn
 from mcp import ServerSession
 from mcp.server.fastmcp import Context, FastMCP
 from sqlalchemy.ext.asyncio import AsyncEngine
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 
-from search_mcp.adapters.db import make_engine, make_session_factory
 from calendar_mcp.adapters.postgres import PostgresCalendarRepository
-from calendar_mcp.store import CalendarRepository
 from calendar_mcp.models import Interview
-from search_mcp.adapters import orm
+from calendar_mcp.store import CalendarRepository
+from search_mcp.adapters.config import settings
+from search_mcp.adapters.db import make_engine, make_session_factory
 
 
 @dataclass
@@ -41,6 +46,13 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 
 mcp = FastMCP("calendar", lifespan=app_lifespan, port=8001)
 
+async def check_token(request: Request, call_next: Any) -> Response:
+    expected = f"Bearer {settings.agent_token}"
+
+    if not secrets.compare_digest(request.headers.get("authorization", ""), expected):
+        return JSONResponse(status_code=401, content={"detail": "Invalid token or missing token"})
+    response: Response = await call_next(request)
+    return response
 
 @mcp.tool()
 async def book_interview(
@@ -74,5 +86,11 @@ if __name__ == "__main__":
     raw = os.getenv("MCP_TRANSPORT", "stdio")
     if raw not in ("stdio", "streamable-http"):
         raise SystemExit(f"Unknown transport: {raw}")
-    transport = cast(Literal["stdio", "streamable-http"], raw)
-    mcp.run(transport=transport)
+    if raw == "stdio":
+        mcp.run(transport="stdio")
+    else:
+        app = mcp.streamable_http_app()
+
+        app.add_middleware(BaseHTTPMiddleware, dispatch=check_token)
+
+        uvicorn.run(app, host="127.0.0.1", port=8001)

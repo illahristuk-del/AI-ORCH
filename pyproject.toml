@@ -22,3 +22,7 @@ strict = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[[tool.mypy.overrides]]
+module = ["check", "check_llm"]
+ignore_errors = true

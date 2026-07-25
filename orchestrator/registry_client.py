@@ -1,5 +1,6 @@
-import httpx
 from typing import Any, cast
+
+import httpx
 
 
 async def fetch_agents(registry_url: str) -> list[dict[str, Any]]:

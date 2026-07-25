@@ -9,26 +9,29 @@ from a2a.server.routes import (
 )
 from a2a.server.tasks import InMemoryTaskStore
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from orchestrator.card import ORCHESTRATOR_CARD
 from orchestrator.executor import OrchestratorExecutor
 from search_mcp.adapters.config import settings
 
+from typing import Any
+
 app = FastAPI()
 
 
 @app.middleware("http")
-async def check_token(request: Request, call_next):
+async def check_token(request: Request, call_next: Any) -> Response:
     if request.url.path == "/.well-known/agent-card.json":
-        return await call_next(request)
-
+        response: Response = await call_next(request)
+        return response
     expected = f"Bearer {settings.agent_token}"
     if not secrets.compare_digest(request.headers.get("authorization", ""), expected):
         return JSONResponse(
             status_code=401, content={"detail": "Invalid token or missing token"}
         )
-    return await call_next(request)
+    response = await call_next(request)
+    return response
 
 
 def main() -> None:

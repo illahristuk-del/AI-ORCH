@@ -1,4 +1,5 @@
 import asyncio
+
 from orchestrator.registry_client import fetch_agents
 from search_mcp.adapters.config import settings
 

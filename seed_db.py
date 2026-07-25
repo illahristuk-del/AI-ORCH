@@ -1,6 +1,6 @@
 import asyncio
 
-from search_mcp.adapters.db import Base, make_engine, make_session_factory
+from search_mcp.adapters.db import make_engine, make_session_factory
 from search_mcp.adapters.orm import CandidateOrmModel
 from search_mcp.data import CANDIDATES
 

@@ -1,15 +1,17 @@
 import json
 
-from anthropic import AsyncAnthropic
-from anthropic.types import ToolUseBlock, MessageParam, ToolParam, TextBlock
-
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import Part
+from anthropic import AsyncAnthropic
+from anthropic.types import MessageParam, TextBlock, ToolParam, ToolUseBlock
 from mcp import ClientSession
-from mcp.client.streamable_http import streamable_http_client
+from mcp.client.streamable_http import streamablehttp_client
 
+from search_mcp.adapters.config import settings
+
+system_config = "Always include each candidate's full UUID in your answer. Downstream agents need the ID to book interviews."
 
 class HRRecruiterExecutor(AgentExecutor):
     def __init__(self, mcp_url: str, anthropic_api_key: str) -> None:
@@ -58,7 +60,7 @@ class HRRecruiterExecutor(AgentExecutor):
                 max_tokens=1024,
                 messages=messages,
                 tools=tools,
-                system="Always include each candidate's full UUID in your answer. Downstream agents need the ID to book interviews.",
+                system=system_config
             )
 
             print("STOP_REASON:", response.stop_reason)
@@ -71,7 +73,7 @@ class HRRecruiterExecutor(AgentExecutor):
             else:
                 for block in response.content:
                     if isinstance(block, ToolUseBlock):
-                        async with streamable_http_client(self._mcp_url) as (
+                        async with streamablehttp_client(self._mcp_url, headers={"Authorization": f"Bearer {settings.agent_token}"}) as (
                             read,
                             write,
                             _,
@@ -101,7 +103,7 @@ class HRRecruiterExecutor(AgentExecutor):
                     max_tokens=1024,
                     messages=messages,
                     tools=tools,
-                    system="Always include each candidate's full UUID in your answer. Downstream agents need the ID to book interviews.",
+                    system=system_config
                 )
 
             print("FINAL STOP: ", final.stop_reason)

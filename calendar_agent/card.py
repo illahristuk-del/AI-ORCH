@@ -1,7 +1,6 @@
 from a2a.types import AgentCapabilities, AgentCard, AgentInterface, AgentSkill
 from a2a.utils import TransportProtocol
 
-
 AGENT_ID = "22222222-2222-2222-2222-222222222222"
 
 BOOK_SKILLS = AgentSkill(

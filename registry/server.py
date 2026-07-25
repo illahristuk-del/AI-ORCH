@@ -1,18 +1,16 @@
 import secrets
-
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from uuid import UUID
 
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException, Request, Header
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from registry.adapters.postgres import PostgresAgentRepository
 from registry.models import Agent, AgentUpdate
-from search_mcp.adapters.db import make_engine, make_session_factory
-
 from search_mcp.adapters.config import settings
+from search_mcp.adapters.db import make_engine, make_session_factory
 
 
 @asynccontextmanager
