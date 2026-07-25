@@ -20,6 +20,10 @@ class Settings(BaseSettings):
 
     registry_url: str
 
+    registry_token: str
+
+    agent_token: str
+
     @property
     def db_url(self) -> str:
         return (

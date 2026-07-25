@@ -1,14 +1,18 @@
+import secrets
+
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from uuid import UUID
 
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from registry.adapters.postgres import PostgresAgentRepository
 from registry.models import Agent, AgentUpdate
 from search_mcp.adapters.db import make_engine, make_session_factory
+
+from search_mcp.adapters.config import settings
 
 
 @asynccontextmanager
@@ -30,6 +34,12 @@ async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
 
 def get_repo(session: AsyncSession = Depends(get_session)) -> PostgresAgentRepository:
     return PostgresAgentRepository(session)
+
+
+async def require_token(authorization: str = Header(default="")) -> None:
+    expected = f"Bearer {settings.registry_token}"
+    if not secrets.compare_digest(authorization, expected):
+        raise HTTPException(status_code=401, detail="Invalid token or missing token")
 
 
 @app.get("/agents/search", status_code=200)
@@ -56,14 +66,14 @@ async def get_agent(
     return agent
 
 
-@app.post("/agents", status_code=201)
+@app.post("/agents", status_code=201, dependencies=[Depends(require_token)])
 async def create_agent(
     agent: Agent, repo: PostgresAgentRepository = Depends(get_repo)
 ) -> Agent:
     return await repo.create(agent)
 
 
-@app.patch("/agents/{agent_id}")
+@app.patch("/agents/{agent_id}", dependencies=[Depends(require_token)])
 async def patch_field_agent(
     agent_id: UUID, data: AgentUpdate, repo: PostgresAgentRepository = Depends(get_repo)
 ) -> Agent:
@@ -73,7 +83,9 @@ async def patch_field_agent(
     return agent
 
 
-@app.delete("/agents/{agent_id}", status_code=204)
+@app.delete(
+    "/agents/{agent_id}", status_code=204, dependencies=[Depends(require_token)]
+)
 async def delete_agent(
     agent_id: UUID, repo: PostgresAgentRepository = Depends(get_repo)
 ) -> None:

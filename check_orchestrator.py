@@ -5,15 +5,18 @@ from uuid import uuid4
 from a2a.client import create_client, ClientConfig
 from a2a.types import Message, Part, Role, SendMessageRequest
 
+from search_mcp.adapters.config import settings
+
 
 async def main() -> None:
     try:
-        http = httpx.AsyncClient(timeout=120)
+        header = {"Authorization": f"Bearer {settings.agent_token}"}
+        http = httpx.AsyncClient(timeout=120, headers=header)
         config = ClientConfig(httpx_client=http)
         client = await create_client("http://localhost:11000/", client_config=config)
 
         part = Part()
-        part.text = "find a python developer with sql and book an interview for 2022-11-01 at 14:00"
+        part.text = "find a python developer with sql and book an interview for 2030-01-01 at 14:00"
         message = Message()
         message.message_id = str(uuid4())
         message.role = Role.ROLE_USER

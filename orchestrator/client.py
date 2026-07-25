@@ -5,9 +5,12 @@ from uuid import uuid4
 from a2a.client import ClientConfig, create_client
 from a2a.types import Message, Part, Role, SendMessageRequest
 
+from search_mcp.adapters.config import settings
+
 
 async def ask_agent(agent_url: str, query: str) -> str:
-    http = httpx.AsyncClient(timeout=60)
+    headers = {"Authorization": f"Bearer {settings.agent_token}"}
+    http = httpx.AsyncClient(timeout=60, headers=headers)
     try:
         config = ClientConfig(httpx_client=http)
         client = await create_client(agent_url, client_config=config)
