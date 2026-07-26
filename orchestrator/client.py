@@ -4,12 +4,12 @@ import httpx
 from a2a.client import ClientConfig, create_client
 from a2a.types import Message, Part, Role, SendMessageRequest
 
-from search_mcp.adapters.config import settings
+from search_mcp.adapters.auth import create_token
 
 
-async def ask_agent(agent_url: str, query: str) -> str:
-    headers = {"Authorization": f"Bearer {settings.agent_token}"}
-    http = httpx.AsyncClient(timeout=60, headers=headers)
+async def ask_agent(agent_url: str, query: str) -> tuple[bool, str]:
+    token = create_token("orchestrator")
+    http = httpx.AsyncClient(timeout=60, headers={"Authorization": f"Bearer {token}"})
     try:
         config = ClientConfig(httpx_client=http)
         client = await create_client(agent_url, client_config=config)
@@ -30,11 +30,11 @@ async def ask_agent(agent_url: str, query: str) -> str:
                     for response_part in artifact.parts:
                         if response_part.text:
                             result_text = response_part.text
-        return result_text
+        return True, result_text
     except Exception as e:
         print("TYPE:", type(e).__name__)
         print("ERROR:", e)
         print("DATA:", getattr(e, "data", None))
-        return f"Agent call failed: {e}"
+        return False, f"Agent call failed: {e}"
     finally:
         await http.aclose()

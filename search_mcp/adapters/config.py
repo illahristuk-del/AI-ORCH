@@ -26,6 +26,8 @@ class Settings(BaseSettings):
 
     agent_token: str
 
+    jwt_secret: str
+
     @property
     def db_url(self) -> str:
         return (

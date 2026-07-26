@@ -1,15 +1,15 @@
-import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from uuid import UUID
 
+import jwt
 import uvicorn
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from registry.adapters.postgres import PostgresAgentRepository
 from registry.models import Agent, AgentUpdate
-from search_mcp.adapters.config import settings
+from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.db import make_engine, make_session_factory
 
 
@@ -35,8 +35,10 @@ def get_repo(session: AsyncSession = Depends(get_session)) -> PostgresAgentRepos
 
 
 async def require_token(authorization: str = Header(default="")) -> None:
-    expected = f"Bearer {settings.registry_token}"
-    if not secrets.compare_digest(authorization, expected):
+    token = authorization.removeprefix("Bearer ")
+    try:
+        verify_token(token)
+    except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token or missing token")
 
 

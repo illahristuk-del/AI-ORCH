@@ -13,7 +13,9 @@ from orchestrator.registry_client import fetch_agents
 
 
 class OrchestratorExecutor(AgentExecutor):
-    def __init__(self, anthropic_api_key: str, registry_url: str, audit_url: str) -> None:
+    def __init__(
+        self, anthropic_api_key: str, registry_url: str, audit_url: str
+    ) -> None:
         self._anthropic_api_key = anthropic_api_key
         self._registry_url = registry_url
         self._audit_url = audit_url
@@ -69,13 +71,13 @@ class OrchestratorExecutor(AgentExecutor):
                     if isinstance(block, ToolUseBlock):
                         url = agent_urls[block.name]
                         tool_input = cast(dict[str, str], block.input)
-                        result = await ask_agent(url, tool_input["query"])
+                        ok, result = await ask_agent(url, tool_input["query"])
                         await log_event(
                             audit_url=self._audit_url,
                             actor="orchestrator",
                             action="delegate",
                             resource=block.name,
-                            status="completed",
+                            status="completed" if ok else "failed",
                             details=tool_input["query"],
                         )
                         messages.append(

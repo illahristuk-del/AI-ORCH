@@ -1,14 +1,14 @@
-import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import jwt
 import uvicorn
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit.adapters.postgres import PostgresAuditRepository
 from audit.models import AuditEvent
-from search_mcp.adapters.config import settings
+from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.db import make_engine, make_session_factory
 
 
@@ -36,8 +36,10 @@ async def get_repo(
 
 
 async def require_token(authorization: str = Header(default="")) -> None:
-    expected = f"Bearer {settings.registry_token}"
-    if not secrets.compare_digest(authorization, expected):
+    token = authorization.removeprefix("Bearer ")
+    try:
+        verify_token(token)
+    except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token or missing token")
 
 

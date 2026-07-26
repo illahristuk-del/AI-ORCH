@@ -1,11 +1,11 @@
 import os
-import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Annotated, Any
 from uuid import UUID
 
+import jwt
 import uvicorn
 from mcp import ServerSession
 from mcp.server.fastmcp import Context, FastMCP
@@ -15,7 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from search_mcp.adapters.config import settings
+from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.db import make_engine, make_session_factory
 from search_mcp.adapters.postgres import PostgresCandidateRepository
 from search_mcp.store import CandidateRepository
@@ -47,10 +47,14 @@ mcp = FastMCP("candidate-search", lifespan=app_lifespan)
 
 
 async def check_token(request: Request, call_next: Any) -> Response:
-    expected = f"Bearer {settings.agent_token}"
-    if not secrets.compare_digest(request.headers.get("authorization", ""), expected):
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.removeprefix("Bearer ")
+
+    try:
+        verify_token(token)
+    except jwt.InvalidTokenError:
         return JSONResponse(
-            status_code=401, content={"detail": "Invalid token or missing token"}
+            status_code=401, content={"detail": "Invalid or missing token"}
         )
     response: Response = await call_next(request)
     return response

@@ -1,5 +1,4 @@
 import os
-import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -7,6 +6,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+import jwt
 import uvicorn
 from mcp import ServerSession
 from mcp.server.fastmcp import Context, FastMCP
@@ -18,7 +18,7 @@ from starlette.responses import JSONResponse, Response
 from calendar_mcp.adapters.postgres import PostgresCalendarRepository
 from calendar_mcp.models import Interview
 from calendar_mcp.store import CalendarRepository
-from search_mcp.adapters.config import settings
+from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.db import make_engine, make_session_factory
 
 
@@ -48,11 +48,14 @@ mcp = FastMCP("calendar", lifespan=app_lifespan, port=8001)
 
 
 async def check_token(request: Request, call_next: Any) -> Response:
-    expected = f"Bearer {settings.agent_token}"
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.removeprefix("Bearer ")
 
-    if not secrets.compare_digest(request.headers.get("authorization", ""), expected):
+    try:
+        verify_token(token)
+    except jwt.InvalidTokenError:
         return JSONResponse(
-            status_code=401, content={"detail": "Invalid token or missing token"}
+            status_code=401, content={"detail": "Invalid or missing token"}
         )
     response: Response = await call_next(request)
     return response

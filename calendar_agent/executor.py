@@ -9,7 +9,7 @@ from anthropic.types import MessageParam, TextBlock, ToolParam, ToolUseBlock
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
 
-from search_mcp.adapters.config import settings
+from search_mcp.adapters.auth import create_token
 
 
 class CalendarBooker(AgentExecutor):
@@ -71,9 +71,10 @@ class CalendarBooker(AgentExecutor):
             else:
                 for block in response.content:
                     if isinstance(block, ToolUseBlock):
+                        token = create_token("calendar_booker")
                         async with streamablehttp_client(
                             self.calendar_mcp_url,
-                            headers={"Authorization": f"Bearer {settings.agent_token}"},
+                            headers={"Authorization": f"Bearer {token}"},
                         ) as (
                             read,
                             write,

@@ -1,9 +1,9 @@
-import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
+import jwt
 import uvicorn
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.routes import (
@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse, Response
 
 from calendar_agent.card import AGENT_CARD, AGENT_ID, BOOK_SKILLS
 from calendar_agent.executor import CalendarBooker
+from search_mcp.adapters.auth import create_token, verify_token
 from search_mcp.adapters.config import settings
 
 
@@ -28,7 +29,8 @@ async def register_in_registry() -> None:
         "skills": list(BOOK_SKILLS.tags),
         "url": settings.calendar_agent_url,
     }
-    headers = {"Authorization": f"Bearer {settings.registry_token}"}
+    token = create_token("calendar_booker")
+    headers = {"Authorization": f"Bearer {token}"}
     try:
         async with httpx.AsyncClient(timeout=10) as http:
             await http.delete(
@@ -55,11 +57,17 @@ async def check_token(request: Request, call_next: Any) -> Response:
     if request.url.path == "/.well-known/agent-card.json":
         response: Response = await call_next(request)
         return response
-    expected = f"Bearer {settings.agent_token}"
-    if not secrets.compare_digest(request.headers.get("authorization", ""), expected):
+
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.removeprefix("Bearer ")
+
+    try:
+        verify_token(token)
+    except jwt.InvalidTokenError:
         return JSONResponse(
-            status_code=401, content={"detail": "Invalid token or missing token"}
+            status_code=401, content={"detail": "Invalid or missing token"}
         )
+
     response = await call_next(request)
     return response
 
