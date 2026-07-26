@@ -71,7 +71,10 @@ class CalendarBooker(AgentExecutor):
             else:
                 for block in response.content:
                     if isinstance(block, ToolUseBlock):
-                        async with streamablehttp_client(self.calendar_mcp_url, headers={"Authorization": f"Bearer {settings.agent_token}"}) as (
+                        async with streamablehttp_client(
+                            self.calendar_mcp_url,
+                            headers={"Authorization": f"Bearer {settings.agent_token}"},
+                        ) as (
                             read,
                             write,
                             _,

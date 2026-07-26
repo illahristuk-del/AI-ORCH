@@ -63,6 +63,7 @@ async def check_token(request: Request, call_next: Any) -> Response:
     response = await call_next(request)
     return response
 
+
 def main() -> None:
     executor = CalendarBooker(settings.calendar_mcp_url, settings.anthropic_api_key)
     handler = DefaultRequestHandler(

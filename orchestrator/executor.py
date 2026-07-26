@@ -7,14 +7,16 @@ from a2a.types import Part
 from anthropic import AsyncAnthropic
 from anthropic.types import MessageParam, TextBlock, ToolParam, ToolUseBlock
 
+from orchestrator.audit_client import log_event
 from orchestrator.client import ask_agent
 from orchestrator.registry_client import fetch_agents
 
 
 class OrchestratorExecutor(AgentExecutor):
-    def __init__(self, anthropic_api_key: str, registry_url: str) -> None:
+    def __init__(self, anthropic_api_key: str, registry_url: str, audit_url: str) -> None:
         self._anthropic_api_key = anthropic_api_key
         self._registry_url = registry_url
+        self._audit_url = audit_url
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         if context.task_id is None or context.context_id is None:
@@ -68,6 +70,14 @@ class OrchestratorExecutor(AgentExecutor):
                         url = agent_urls[block.name]
                         tool_input = cast(dict[str, str], block.input)
                         result = await ask_agent(url, tool_input["query"])
+                        await log_event(
+                            audit_url=self._audit_url,
+                            actor="orchestrator",
+                            action="delegate",
+                            resource=block.name,
+                            status="completed",
+                            details=tool_input["query"],
+                        )
                         messages.append(
                             {
                                 "role": "user",

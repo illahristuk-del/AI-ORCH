@@ -1,4 +1,5 @@
 import secrets
+from typing import Any
 
 import uvicorn
 from a2a.server.request_handlers import DefaultRequestHandler
@@ -14,8 +15,6 @@ from fastapi.responses import JSONResponse, Response
 from orchestrator.card import ORCHESTRATOR_CARD
 from orchestrator.executor import OrchestratorExecutor
 from search_mcp.adapters.config import settings
-
-from typing import Any
 
 app = FastAPI()
 
@@ -38,6 +37,7 @@ def main() -> None:
     executor = OrchestratorExecutor(
         settings.anthropic_api_key,
         settings.registry_url,
+        settings.audit_url,
     )
 
     handler = DefaultRequestHandler(

@@ -13,6 +13,7 @@ from search_mcp.adapters.config import settings
 
 system_config = "Always include each candidate's full UUID in your answer. Downstream agents need the ID to book interviews."
 
+
 class HRRecruiterExecutor(AgentExecutor):
     def __init__(self, mcp_url: str, anthropic_api_key: str) -> None:
         self._mcp_url = mcp_url
@@ -60,7 +61,7 @@ class HRRecruiterExecutor(AgentExecutor):
                 max_tokens=1024,
                 messages=messages,
                 tools=tools,
-                system=system_config
+                system=system_config,
             )
 
             print("STOP_REASON:", response.stop_reason)
@@ -73,7 +74,10 @@ class HRRecruiterExecutor(AgentExecutor):
             else:
                 for block in response.content:
                     if isinstance(block, ToolUseBlock):
-                        async with streamablehttp_client(self._mcp_url, headers={"Authorization": f"Bearer {settings.agent_token}"}) as (
+                        async with streamablehttp_client(
+                            self._mcp_url,
+                            headers={"Authorization": f"Bearer {settings.agent_token}"},
+                        ) as (
                             read,
                             write,
                             _,
@@ -103,7 +107,7 @@ class HRRecruiterExecutor(AgentExecutor):
                     max_tokens=1024,
                     messages=messages,
                     tools=tools,
-                    system=system_config
+                    system=system_config,
                 )
 
             print("FINAL STOP: ", final.stop_reason)

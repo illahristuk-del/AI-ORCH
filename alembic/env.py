@@ -6,6 +6,10 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
+from audit.adapters import orm as audit_orm  # noqa: F401
+from calendar_mcp.adapters import orm as calendar_orm  # noqa: F401
+from registry.adapters import orm as agent_orm  # noqa: F401
+from search_mcp.adapters import orm  # noqa: F401
 from search_mcp.adapters.config import settings
 from search_mcp.adapters.db import Base
 

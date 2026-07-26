@@ -46,13 +46,17 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 
 mcp = FastMCP("calendar", lifespan=app_lifespan, port=8001)
 
+
 async def check_token(request: Request, call_next: Any) -> Response:
     expected = f"Bearer {settings.agent_token}"
 
     if not secrets.compare_digest(request.headers.get("authorization", ""), expected):
-        return JSONResponse(status_code=401, content={"detail": "Invalid token or missing token"})
+        return JSONResponse(
+            status_code=401, content={"detail": "Invalid token or missing token"}
+        )
     response: Response = await call_next(request)
     return response
+
 
 @mcp.tool()
 async def book_interview(

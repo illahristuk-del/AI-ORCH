@@ -20,6 +20,8 @@ class Settings(BaseSettings):
 
     registry_url: str
 
+    audit_url: str
+
     registry_token: str
 
     agent_token: str
