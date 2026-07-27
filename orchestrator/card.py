@@ -21,9 +21,7 @@ ORCHESTRATOR_CARD = AgentCard(
     description="I accept a complex task, decompose it, delegate it to specialized agents, and return the result.",
     version="0.1.0",
     supported_interfaces=[
-        AgentInterface(
-            url="http://localhost:11000/", protocol_binding=TransportProtocol.JSONRPC
-        )
+        AgentInterface(url="http://localhost:11000/", protocol_binding=TransportProtocol.JSONRPC)
     ],
     default_input_modes=["text"],
     default_output_modes=["text"],

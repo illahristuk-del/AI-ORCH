@@ -1,4 +1,5 @@
 import json
+import logging
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
@@ -11,6 +12,8 @@ from mcp.client.streamable_http import streamablehttp_client
 
 from search_mcp.adapters.auth import create_token
 
+logger = logging.getLogger(__name__)
+
 
 class CalendarBooker(AgentExecutor):
     def __init__(self, calendar_mcp_url: str, anthropic_api_key: str) -> None:
@@ -18,9 +21,9 @@ class CalendarBooker(AgentExecutor):
         self._anthropic_api_key = anthropic_api_key
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        print("current_task: ", context.current_task)
-        print("task_id: ", context.task_id)
-        print("context_id: ", context.context_id)
+        logger.debug("current_task: %s", context.current_task)
+        logger.debug("task_id: %s", context.task_id)
+        logger.debug("context_id: %s", context.context_id)
 
         if context.task_id is None or context.context_id is None:
             raise ValueError("Task must be initialized before execution")
@@ -61,8 +64,8 @@ class CalendarBooker(AgentExecutor):
                 tools=tools,
             )
 
-            print("STOP REASON:", response.stop_reason)
-            print("CONTENT:", response.content)
+            logger.debug("stop reason: %s", response.stop_reason)
+            logger.debug("content: %s", response.content)
 
             messages.append({"role": "assistant", "content": response.content})
 
@@ -82,9 +85,7 @@ class CalendarBooker(AgentExecutor):
                         ):
                             async with ClientSession(read, write) as session:
                                 await session.initialize()
-                                result = await session.call_tool(
-                                    block.name, block.input
-                                )
+                                result = await session.call_tool(block.name, block.input)
                                 messages.append(
                                     {
                                         "role": "user",
@@ -92,9 +93,7 @@ class CalendarBooker(AgentExecutor):
                                             {
                                                 "type": "tool_result",
                                                 "tool_use_id": block.id,
-                                                "content": json.dumps(
-                                                    result.structuredContent
-                                                ),
+                                                "content": json.dumps(result.structuredContent),
                                             }
                                         ],
                                     }
@@ -107,13 +106,11 @@ class CalendarBooker(AgentExecutor):
                     tools=tools,
                 )
 
-            print("FINAL STOP:", final_result.stop_reason)
-            print("FINAL CONTENT:", final_result.content)
+            logger.debug("final stop: %s", final_result.stop_reason)
+            logger.debug("final content: %s", final_result.content)
 
             final_text = "".join(
-                block.text
-                for block in final_result.content
-                if isinstance(block, TextBlock)
+                block.text for block in final_result.content if isinstance(block, TextBlock)
             )
 
             part = Part()
@@ -121,9 +118,7 @@ class CalendarBooker(AgentExecutor):
             await updater.add_artifact([part], name="interview")
             await updater.complete()
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
+            logger.exception("calendar booker failed")
             error_part = Part()
             error_part.text = f"Booking failed: {e}"
             message = updater.new_agent_message([error_part])

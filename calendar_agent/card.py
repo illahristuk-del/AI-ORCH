@@ -26,9 +26,7 @@ AGENT_CARD = AgentCard(
     description="Calendar agent who books candidate slots",
     version="0.1.0",
     supported_interfaces=[
-        AgentInterface(
-            url="http://localhost:10000/", protocol_binding=TransportProtocol.JSONRPC
-        )
+        AgentInterface(url="http://localhost:10000/", protocol_binding=TransportProtocol.JSONRPC)
     ],
     default_input_modes=["text"],
     default_output_modes=["text"],

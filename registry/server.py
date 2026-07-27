@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from uuid import UUID
@@ -11,6 +12,9 @@ from registry.adapters.postgres import PostgresAgentRepository
 from registry.models import Agent, AgentUpdate
 from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.db import make_engine, make_session_factory
+from search_mcp.adapters.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -39,6 +43,7 @@ async def require_token(authorization: str = Header(default="")) -> None:
     try:
         verify_token(token)
     except jwt.InvalidTokenError:
+        logger.warning("rejected: invalid token")
         raise HTTPException(status_code=401, detail="Invalid token or missing token")
 
 
@@ -57,19 +62,16 @@ async def get_list_agent(
 
 
 @app.get("/agents/{agent_id}", status_code=200)
-async def get_agent(
-    agent_id: UUID, repo: PostgresAgentRepository = Depends(get_repo)
-) -> Agent:
+async def get_agent(agent_id: UUID, repo: PostgresAgentRepository = Depends(get_repo)) -> Agent:
     agent = await repo.get(agent_id)
     if agent is None:
+        logger.warning("agent not found")
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent
 
 
 @app.post("/agents", status_code=201, dependencies=[Depends(require_token)])
-async def create_agent(
-    agent: Agent, repo: PostgresAgentRepository = Depends(get_repo)
-) -> Agent:
+async def create_agent(agent: Agent, repo: PostgresAgentRepository = Depends(get_repo)) -> Agent:
     return await repo.create(agent)
 
 
@@ -79,22 +81,22 @@ async def patch_field_agent(
 ) -> Agent:
     agent = await repo.update(agent_id, data)
     if agent is None:
+        logger.warning("agent not found")
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent
 
 
-@app.delete(
-    "/agents/{agent_id}", status_code=204, dependencies=[Depends(require_token)]
-)
-async def delete_agent(
-    agent_id: UUID, repo: PostgresAgentRepository = Depends(get_repo)
-) -> None:
+@app.delete("/agents/{agent_id}", status_code=204, dependencies=[Depends(require_token)])
+async def delete_agent(agent_id: UUID, repo: PostgresAgentRepository = Depends(get_repo)) -> None:
     deleted = await repo.delete(agent_id)
     if not deleted:
+        logger.warning("agent not found")
         raise HTTPException(status_code=404, detail="Agent not found")
 
 
 def main() -> None:
+    setup_logging()
+
     uvicorn.run(app, host="127.0.0.1", port=12000)
 
 

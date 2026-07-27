@@ -43,12 +43,8 @@ def test_search_excludes_non_matching() -> None:
 
 
 def test_search_returns_empty_when_nothing_matches() -> None:
-    not_match_candidate1 = Candidate(
-        name="Karl", skills=("python",), experience_years=5
-    )
-    not_match_candidate2 = Candidate(
-        name="Bob", skills=("tensorflow",), experience_years=5
-    )
+    not_match_candidate1 = Candidate(name="Karl", skills=("python",), experience_years=5)
+    not_match_candidate2 = Candidate(name="Bob", skills=("tensorflow",), experience_years=5)
     not_match_candidate3 = Candidate(name="Derek", skills=("go",), experience_years=5)
 
     result = rank_candidates(

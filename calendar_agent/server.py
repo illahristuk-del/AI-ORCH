@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -19,6 +20,9 @@ from calendar_agent.card import AGENT_CARD, AGENT_ID, BOOK_SKILLS
 from calendar_agent.executor import CalendarBooker
 from search_mcp.adapters.auth import create_token, verify_token
 from search_mcp.adapters.config import settings
+from search_mcp.adapters.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 async def register_in_registry() -> None:
@@ -33,14 +37,10 @@ async def register_in_registry() -> None:
     headers = {"Authorization": f"Bearer {token}"}
     try:
         async with httpx.AsyncClient(timeout=10) as http:
-            await http.delete(
-                f"{settings.registry_url}/agents/{AGENT_ID}", headers=headers
-            )
-            await http.post(
-                f"{settings.registry_url}/agents", json=payload, headers=headers
-            )
+            await http.delete(f"{settings.registry_url}/agents/{AGENT_ID}", headers=headers)
+            await http.post(f"{settings.registry_url}/agents", json=payload, headers=headers)
     except Exception as e:
-        print(f"Registry unavailable, skipping registration: {e}")
+        logger.warning("registry failed: %s", e)
 
 
 @asynccontextmanager
@@ -64,15 +64,15 @@ async def check_token(request: Request, call_next: Any) -> Response:
     try:
         verify_token(token)
     except jwt.InvalidTokenError:
-        return JSONResponse(
-            status_code=401, content={"detail": "Invalid or missing token"}
-        )
+        return JSONResponse(status_code=401, content={"detail": "Invalid or missing token"})
 
     response = await call_next(request)
     return response
 
 
 def main() -> None:
+    setup_logging()
+
     executor = CalendarBooker(settings.calendar_mcp_url, settings.anthropic_api_key)
     handler = DefaultRequestHandler(
         agent_executor=executor,

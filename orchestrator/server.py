@@ -16,6 +16,7 @@ from orchestrator.card import ORCHESTRATOR_CARD
 from orchestrator.executor import OrchestratorExecutor
 from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.config import settings
+from search_mcp.adapters.logging_config import setup_logging
 
 app = FastAPI()
 
@@ -32,14 +33,14 @@ async def check_token(request: Request, call_next: Any) -> Response:
     try:
         verify_token(token)
     except jwt.InvalidTokenError:
-        return JSONResponse(
-            status_code=401, content={"detail": "Invalid or missing token"}
-        )
+        return JSONResponse(status_code=401, content={"detail": "Invalid or missing token"})
     response = await call_next(request)
     return response
 
 
 def main() -> None:
+    setup_logging()
+
     executor = OrchestratorExecutor(
         settings.anthropic_api_key,
         settings.registry_url,

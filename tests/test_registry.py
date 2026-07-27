@@ -121,9 +121,7 @@ async def test_update_agent_name_description_skills(
 
 async def test_update_update_unknown_agent_from_db(session: AsyncSession) -> None:
     repo = PostgresAgentRepository(session)
-    result = await repo.update(
-        uuid4(), AgentUpdate(name="name", description="description")
-    )
+    result = await repo.update(uuid4(), AgentUpdate(name="name", description="description"))
 
     assert result is None
 
@@ -145,9 +143,7 @@ async def test_delete_unknown_agent_from_db(session: AsyncSession) -> None:
     assert result is False
 
 
-async def test_search_agent_by_skill(
-    session: AsyncSession, sample_agent: Agent
-) -> None:
+async def test_search_agent_by_skill(session: AsyncSession, sample_agent: Agent) -> None:
     await _seed(session, sample_agent)
 
     repo = PostgresAgentRepository(session)

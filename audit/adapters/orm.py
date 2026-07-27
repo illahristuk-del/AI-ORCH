@@ -11,12 +11,8 @@ from search_mcp.adapters.db import Base
 class AuditOrmModel(Base):
     __tablename__ = "audit"
 
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), primary_key=True, default=uuid4
-    )
-    timestamp: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now
-    )
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
     actor: Mapped[str] = mapped_column(String(100), nullable=False)
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     resource: Mapped[str | None] = mapped_column(String(200), nullable=True)

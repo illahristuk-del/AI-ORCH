@@ -1,4 +1,5 @@
 import json
+import logging
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
@@ -11,6 +12,8 @@ from mcp.client.streamable_http import streamablehttp_client
 
 from search_mcp.adapters.auth import create_token
 
+logger = logging.getLogger(__name__)
+
 system_config = "Always include each candidate's full UUID in your answer. Downstream agents need the ID to book interviews."
 
 
@@ -20,9 +23,9 @@ class HRRecruiterExecutor(AgentExecutor):
         self._anthropic_api_key = anthropic_api_key
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        print("current_task:", context.current_task)
-        print("task_id:", context.task_id)
-        print("context_id:", context.context_id)
+        logger.debug("current_task: %s", context.current_task)
+        logger.debug("task_id: %s", context.task_id)
+        logger.debug("context_id: %s", context.context_id)
 
         if context.task_id is None or context.context_id is None:
             raise ValueError("Task must be initialized before execution")
@@ -64,8 +67,8 @@ class HRRecruiterExecutor(AgentExecutor):
                 system=system_config,
             )
 
-            print("STOP_REASON:", response.stop_reason)
-            print("CONTENT:", response.content)
+            logger.debug("stop reason: %s", response.stop_reason)
+            logger.debug("content: %s", response.content)
 
             messages.append({"role": "assistant", "content": response.content})
 
@@ -85,9 +88,7 @@ class HRRecruiterExecutor(AgentExecutor):
                         ):
                             async with ClientSession(read, write) as session:
                                 await session.initialize()
-                                result = await session.call_tool(
-                                    block.name, block.input
-                                )
+                                result = await session.call_tool(block.name, block.input)
                                 messages.append(
                                     {
                                         "role": "user",
@@ -95,9 +96,7 @@ class HRRecruiterExecutor(AgentExecutor):
                                             {
                                                 "type": "tool_result",
                                                 "tool_use_id": block.id,
-                                                "content": json.dumps(
-                                                    result.structuredContent
-                                                ),
+                                                "content": json.dumps(result.structuredContent),
                                             }
                                         ],
                                     }
@@ -111,8 +110,8 @@ class HRRecruiterExecutor(AgentExecutor):
                     system=system_config,
                 )
 
-            print("FINAL STOP: ", final.stop_reason)
-            print("FINAL CONTENT: ", final.content)
+            logger.debug("final stop: %s", final.stop_reason)
+            logger.debug("final content: %s", final.content)
 
             final_text = "".join(
                 block.text for block in final.content if isinstance(block, TextBlock)
@@ -124,9 +123,7 @@ class HRRecruiterExecutor(AgentExecutor):
             await updater.complete()
 
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
+            logger.exception("hr recruiter search failed")
             error_part = Part()
             error_part.text = f"Search failed: {e}"
             message = updater.new_agent_message([error_part])

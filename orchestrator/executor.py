@@ -1,3 +1,4 @@
+import logging
 from typing import cast
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
@@ -11,11 +12,11 @@ from orchestrator.audit_client import log_event
 from orchestrator.client import ask_agent
 from orchestrator.registry_client import fetch_agents
 
+logger = logging.getLogger(__name__)
+
 
 class OrchestratorExecutor(AgentExecutor):
-    def __init__(
-        self, anthropic_api_key: str, registry_url: str, audit_url: str
-    ) -> None:
+    def __init__(self, anthropic_api_key: str, registry_url: str, audit_url: str) -> None:
         self._anthropic_api_key = anthropic_api_key
         self._registry_url = registry_url
         self._audit_url = audit_url
@@ -61,8 +62,8 @@ class OrchestratorExecutor(AgentExecutor):
                     tools=tools,
                 )
 
-                print("STOP REASON: ", response.stop_reason)
-                print("CONTENT: ", response.content)
+                logger.debug("stop reason: %s", response.stop_reason)
+                logger.debug("content : %s", response.content)
 
                 messages.append({"role": "assistant", "content": response.content})
                 if response.stop_reason != "tool_use":
@@ -102,9 +103,7 @@ class OrchestratorExecutor(AgentExecutor):
             await updater.add_artifact([part], name="orchestration_result")
             await updater.complete()
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
+            logger.exception("orchestrator_failed")
             error_part = Part()
             error_part.text = f"Process failed: {e}"
             message = updater.new_agent_message([error_part])

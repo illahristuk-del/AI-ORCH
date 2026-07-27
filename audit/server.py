@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -10,6 +11,9 @@ from audit.adapters.postgres import PostgresAuditRepository
 from audit.models import AuditEvent
 from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.db import make_engine, make_session_factory
+from search_mcp.adapters.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -40,6 +44,7 @@ async def require_token(authorization: str = Header(default="")) -> None:
     try:
         verify_token(token)
     except jwt.InvalidTokenError:
+        logger.warning("rejected: invalid token")
         raise HTTPException(status_code=401, detail="Invalid token or missing token")
 
 
@@ -59,6 +64,8 @@ async def create_audit(
 
 
 def main() -> None:
+    setup_logging()
+
     uvicorn.run(app, host="127.0.0.1", port=13000)
 
 

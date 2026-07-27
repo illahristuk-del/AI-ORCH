@@ -1,6 +1,10 @@
+import logging
+
 import httpx
 
 from search_mcp.adapters.auth import create_token
+
+logger = logging.getLogger(__name__)
 
 
 async def log_event(
@@ -26,4 +30,4 @@ async def log_event(
         async with httpx.AsyncClient(timeout=10) as http:
             await http.post(f"{audit_url}/audit", json=payload, headers=headers)
     except Exception as e:
-        print(f"Audit error: {e}")
+        logger.warning("log_vent failed: %s", e)

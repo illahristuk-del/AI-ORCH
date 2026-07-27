@@ -1,3 +1,4 @@
+import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -20,6 +21,9 @@ from calendar_mcp.models import Interview
 from calendar_mcp.store import CalendarRepository
 from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.db import make_engine, make_session_factory
+from search_mcp.adapters.logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -54,9 +58,8 @@ async def check_token(request: Request, call_next: Any) -> Response:
     try:
         verify_token(token)
     except jwt.InvalidTokenError:
-        return JSONResponse(
-            status_code=401, content={"detail": "Invalid or missing token"}
-        )
+        logger.warning("rejected: invalid token")
+        return JSONResponse(status_code=401, content={"detail": "Invalid or missing token"})
     response: Response = await call_next(request)
     return response
 
@@ -90,6 +93,7 @@ async def book_interview(
 
 
 if __name__ == "__main__":
+    setup_logging()
     raw = os.getenv("MCP_TRANSPORT", "stdio")
     if raw not in ("stdio", "streamable-http"):
         raise SystemExit(f"Unknown transport: {raw}")

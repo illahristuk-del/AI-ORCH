@@ -1,3 +1,4 @@
+import logging
 from uuid import uuid4
 
 import httpx
@@ -5,6 +6,8 @@ from a2a.client import ClientConfig, create_client
 from a2a.types import Message, Part, Role, SendMessageRequest
 
 from search_mcp.adapters.auth import create_token
+
+logger = logging.getLogger(__name__)
 
 
 async def ask_agent(agent_url: str, query: str) -> tuple[bool, str]:
@@ -32,9 +35,7 @@ async def ask_agent(agent_url: str, query: str) -> tuple[bool, str]:
                             result_text = response_part.text
         return True, result_text
     except Exception as e:
-        print("TYPE:", type(e).__name__)
-        print("ERROR:", e)
-        print("DATA:", getattr(e, "data", None))
+        logger.exception("agent call failed")
         return False, f"Agent call failed: {e}"
     finally:
         await http.aclose()

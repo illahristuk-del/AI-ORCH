@@ -26,9 +26,7 @@ AGENT_CARD = AgentCard(
     description="HR agent that finds candidates in the company database.",
     version="0.1.0",
     supported_interfaces=[
-        AgentInterface(
-            url="http://localhost:9999/", protocol_binding=TransportProtocol.JSONRPC
-        )
+        AgentInterface(url="http://localhost:9999/", protocol_binding=TransportProtocol.JSONRPC)
     ],
     default_input_modes=["text"],
     default_output_modes=["text"],

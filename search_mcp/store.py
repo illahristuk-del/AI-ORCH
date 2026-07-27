@@ -4,9 +4,7 @@ from uuid import UUID
 from .models import Candidate
 
 
-def rank_candidates(
-    candidates: list[Candidate], query: str, limit: int
-) -> list[Candidate]:
+def rank_candidates(candidates: list[Candidate], query: str, limit: int) -> list[Candidate]:
     tokens = {t.strip(",.;") for t in query.lower().split()}
     scored: list[tuple[int, Candidate]] = []
     for candidate in candidates:

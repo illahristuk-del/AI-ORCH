@@ -11,9 +11,7 @@ from search_mcp.adapters.auth import create_token
 async def main() -> None:
     try:
         token = create_token("check_client")
-        http = httpx.AsyncClient(
-            timeout=120, headers={"Authorization": f"Bearer {token}"}
-        )
+        http = httpx.AsyncClient(timeout=120, headers={"Authorization": f"Bearer {token}"})
         config = ClientConfig(httpx_client=http)
         client = await create_client("http://localhost:11000/", client_config=config)
 
