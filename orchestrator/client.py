@@ -6,13 +6,15 @@ from a2a.client import ClientConfig, create_client
 from a2a.types import Message, Part, Role, SendMessageRequest
 
 from search_mcp.adapters.auth import create_token
+from search_mcp.adapters.tracing import trace_id_var
 
 logger = logging.getLogger(__name__)
 
 
 async def ask_agent(agent_url: str, query: str) -> tuple[bool, str]:
     token = create_token("orchestrator")
-    http = httpx.AsyncClient(timeout=60, headers={"Authorization": f"Bearer {token}"})
+    trace_id = trace_id_var.get()
+    http = httpx.AsyncClient(timeout=60, headers={"Authorization": f"Bearer {token}", "X-Trace-Id": trace_id})
     try:
         config = ClientConfig(httpx_client=http)
         client = await create_client(agent_url, client_config=config)

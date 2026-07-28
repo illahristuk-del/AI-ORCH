@@ -22,6 +22,7 @@ from calendar_mcp.store import CalendarRepository
 from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.db import make_engine, make_session_factory
 from search_mcp.adapters.logging_config import setup_logging
+from search_mcp.adapters.tracing import trace_id_var
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,8 @@ mcp = FastMCP("calendar", lifespan=app_lifespan, port=8001)
 
 
 async def check_token(request: Request, call_next: Any) -> Response:
+    trace_id = request.headers.get("x-trace-id", "")
+    trace_id_var.set(trace_id)
     auth_header = request.headers.get("authorization", "")
     token = auth_header.removeprefix("Bearer ")
 

@@ -21,6 +21,7 @@ from calendar_agent.executor import CalendarBooker
 from search_mcp.adapters.auth import create_token, verify_token
 from search_mcp.adapters.config import settings
 from search_mcp.adapters.logging_config import setup_logging
+from search_mcp.adapters.tracing import trace_id_var
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,9 @@ async def check_token(request: Request, call_next: Any) -> Response:
     if request.url.path == "/.well-known/agent-card.json":
         response: Response = await call_next(request)
         return response
+
+    trace_id = request.headers.get("x-trace-id", "")
+    trace_id_var.set(trace_id)
 
     auth_header = request.headers.get("authorization", "")
     token = auth_header.removeprefix("Bearer ")

@@ -1,5 +1,6 @@
 import logging
 from typing import cast
+from uuid import uuid4
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
@@ -11,9 +12,9 @@ from anthropic.types import MessageParam, TextBlock, ToolParam, ToolUseBlock
 from orchestrator.audit_client import log_event
 from orchestrator.client import ask_agent
 from orchestrator.registry_client import fetch_agents
+from search_mcp.adapters.tracing import trace_id_var
 
 logger = logging.getLogger(__name__)
-
 
 class OrchestratorExecutor(AgentExecutor):
     def __init__(self, anthropic_api_key: str, registry_url: str, audit_url: str) -> None:
@@ -24,6 +25,8 @@ class OrchestratorExecutor(AgentExecutor):
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         if context.task_id is None or context.context_id is None:
             raise ValueError("Task must be initialized before execution")
+
+        trace_id_var.set(str(uuid4()))
 
         updater = TaskUpdater(event_queue, context.task_id, context.context_id)
 
