@@ -16,7 +16,8 @@ from a2a.server.tasks import InMemoryTaskStore
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from hr_agent.card import AGENT_CARD, AGENT_ID, SEARCH_SKILL
 from hr_agent.executor import HRRecruiterExecutor
@@ -58,7 +59,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.middleware("http")
 async def check_token(request: Request, call_next: Any) -> Response:
-    if request.url.path == "/.well-known/agent-card.json":
+    if request.url.path in ("/.well-known/agent-card.json", "/metrics"):
         response: Response = await call_next(request)
         return response
 
@@ -81,7 +82,8 @@ def main() -> None:
     setup_tracing("hr recruiter")
 
     FastAPIInstrumentor.instrument_app(app)
-    SQLAlchemyInstrumentor().instrument()
+    HTTPXClientInstrumentor().instrument()
+    Instrumentator().instrument(app).expose(app)
 
     executor = HRRecruiterExecutor(settings.mcp_url, settings.anthropic_api_key)
     handler = DefaultRequestHandler(

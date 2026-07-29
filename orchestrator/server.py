@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from orchestrator.card import ORCHESTRATOR_CARD
 from orchestrator.executor import OrchestratorExecutor
@@ -26,7 +27,7 @@ app = FastAPI()
 
 @app.middleware("http")
 async def check_token(request: Request, call_next: Any) -> Response:
-    if request.url.path == "/.well-known/agent-card.json":
+    if request.url.path in ("/.well-known/agent-card.json", "/metrics"):
         response: Response = await call_next(request)
         return response
 
@@ -47,6 +48,7 @@ def main() -> None:
 
     FastAPIInstrumentor.instrument_app(app)
     HTTPXClientInstrumentor().instrument()
+    Instrumentator().instrument(app).expose(app)
 
     executor = OrchestratorExecutor(
         settings.anthropic_api_key,

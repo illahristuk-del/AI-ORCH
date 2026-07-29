@@ -16,7 +16,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from opentelemetry.instrumentation.starlette import StarletteInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from prometheus_client import make_asgi_app
 
 from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.db import make_engine, make_session_factory
@@ -55,6 +56,10 @@ mcp = FastMCP("candidate-search", lifespan=app_lifespan)
 
 
 async def check_token(request: Request, call_next: Any) -> Response:
+    if request.url.path in ("/metrics", "/metrics/"):
+        response: Response = await call_next(request)
+        return response
+
     trace_id = request.headers.get("x-trace-id", "")
     trace_id_var.set(trace_id)
     auth_header = request.headers.get("authorization", "")
@@ -130,10 +135,11 @@ if __name__ == "__main__":
         mcp.run(transport="stdio")
     else:
         app = mcp.streamable_http_app()
+        app.add_middleware(BaseHTTPMiddleware, dispatch=check_token)
 
         StarletteInstrumentor.instrument_app(app)
-        HTTPXClientInstrumentor().instrument()
+        SQLAlchemyInstrumentor().instrument()
 
-        app.add_middleware(BaseHTTPMiddleware, dispatch=check_token)
+        app.mount("/metrics", make_asgi_app())
 
         uvicorn.run(app, host="127.0.0.1", port=8000)

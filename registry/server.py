@@ -9,6 +9,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from registry.adapters.postgres import PostgresAgentRepository
 from registry.models import Agent, AgentUpdate
@@ -103,6 +104,7 @@ def main() -> None:
 
     FastAPIInstrumentor.instrument_app(app)
     HTTPXClientInstrumentor().instrument()
+    Instrumentator().instrument(app).expose(app)
 
     uvicorn.run(app, host="127.0.0.1", port=12000)
 

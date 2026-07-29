@@ -16,8 +16,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from opentelemetry.instrumentation.starlette import StarletteInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from prometheus_client import make_asgi_app
 
 from calendar_mcp.adapters.postgres import PostgresCalendarRepository
 from calendar_mcp.models import Interview
@@ -57,6 +57,10 @@ mcp = FastMCP("calendar", lifespan=app_lifespan, port=8001)
 
 
 async def check_token(request: Request, call_next: Any) -> Response:
+    if request.url.path in ("/metrics", "/metrics/"):
+        response: Response = await call_next(request)
+        return response
+
     trace_id = request.headers.get("x-trace-id", "")
     trace_id_var.set(trace_id)
     auth_header = request.headers.get("authorization", "")
@@ -114,5 +118,7 @@ if __name__ == "__main__":
 
         StarletteInstrumentor.instrument_app(app)
         SQLAlchemyInstrumentor().instrument()
+
+        app.mount("/metrics", make_asgi_app())
 
         uvicorn.run(app, host="127.0.0.1", port=8001)
