@@ -12,6 +12,7 @@ from mcp.client.streamable_http import streamablehttp_client
 
 from search_mcp.adapters.auth import create_token
 from search_mcp.adapters.tracing import trace_id_var
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,7 +79,10 @@ class CalendarBooker(AgentExecutor):
                         trace_id = trace_id_var.get()
                         async with streamablehttp_client(
                             self.calendar_mcp_url,
-                            headers={"Authorization": f"Bearer {token}", "X-Trace-Id": trace_id},
+                            headers={
+                                "Authorization": f"Bearer {token}",
+                                "X-Trace-Id": trace_id,
+                            },
                         ) as (
                             read,
                             write,

@@ -15,6 +15,9 @@ from a2a.server.routes import (
 from a2a.server.tasks import InMemoryTaskStore
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from calendar_agent.card import AGENT_CARD, AGENT_ID, BOOK_SKILLS
 from calendar_agent.executor import CalendarBooker
@@ -22,6 +25,7 @@ from search_mcp.adapters.auth import create_token, verify_token
 from search_mcp.adapters.config import settings
 from search_mcp.adapters.logging_config import setup_logging
 from search_mcp.adapters.tracing import trace_id_var
+from search_mcp.adapters.otel import setup_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +59,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.middleware("http")
 async def check_token(request: Request, call_next: Any) -> Response:
-    if request.url.path == "/.well-known/agent-card.json":
+    if request.url.path in ("/.well-known/agent-card.json", "/metrics"):
         response: Response = await call_next(request)
         return response
 
@@ -76,6 +80,11 @@ async def check_token(request: Request, call_next: Any) -> Response:
 
 def main() -> None:
     setup_logging()
+    setup_tracing("calendar booker")
+
+    FastAPIInstrumentor.instrument_app(app)
+    HTTPXClientInstrumentor().instrument()
+    Instrumentator().instrument(app).expose(app)
 
     executor = CalendarBooker(settings.calendar_mcp_url, settings.anthropic_api_key)
     handler = DefaultRequestHandler(

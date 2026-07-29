@@ -16,6 +16,7 @@ from search_mcp.adapters.tracing import trace_id_var
 
 logger = logging.getLogger(__name__)
 
+
 class OrchestratorExecutor(AgentExecutor):
     def __init__(self, anthropic_api_key: str, registry_url: str, audit_url: str) -> None:
         self._anthropic_api_key = anthropic_api_key
