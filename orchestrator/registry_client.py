@@ -5,6 +5,7 @@ import httpx
 from search_mcp.adapters.auth import create_token
 from search_mcp.adapters.tracing import trace_id_var
 
+
 async def fetch_agents(registry_url: str) -> list[dict[str, Any]]:
     token = create_token("orchestrator")
     trace_id = trace_id_var.get()

@@ -63,7 +63,7 @@ async def check_token(request: Request, call_next: Any) -> Response:
         response: Response = await call_next(request)
         return response
 
-    trace_id = request.headers.get("x-trace-id", "") 
+    trace_id = request.headers.get("x-trace-id", "")
     trace_id_var.set(trace_id)
 
     auth_header = request.headers.get("authorization", "")

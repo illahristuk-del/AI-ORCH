@@ -82,7 +82,10 @@ class HRRecruiterExecutor(AgentExecutor):
                         trace_id = trace_id_var.get()
                         async with streamablehttp_client(
                             self._mcp_url,
-                            headers={"Authorization": f"Bearer {token}", "X-Trace-Id": trace_id},
+                            headers={
+                                "Authorization": f"Bearer {token}",
+                                "X-Trace-Id": trace_id,
+                            },
                         ) as (
                             read,
                             write,

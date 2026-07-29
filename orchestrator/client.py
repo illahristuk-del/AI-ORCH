@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 async def ask_agent(agent_url: str, query: str) -> tuple[bool, str]:
     token = create_token("orchestrator")
     trace_id = trace_id_var.get()
-    http = httpx.AsyncClient(timeout=60, headers={"Authorization": f"Bearer {token}", "X-Trace-Id": trace_id})
+    http = httpx.AsyncClient(
+        timeout=60, headers={"Authorization": f"Bearer {token}", "X-Trace-Id": trace_id}
+    )
     try:
         config = ClientConfig(httpx_client=http)
         client = await create_client(agent_url, client_config=config)
