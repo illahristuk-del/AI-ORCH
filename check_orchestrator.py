@@ -16,7 +16,7 @@ async def main() -> None:
         client = await create_client("http://localhost:11000/", client_config=config)
 
         part = Part()
-        part.text = "find a python developer with sql and book an interview for 2034-01-01 at 03:00"
+        part.text = "find a python developer with sql and book an interview for 2031-01-01 at 09:00"
         message = Message()
         message.message_id = str(uuid4())
         message.role = Role.ROLE_USER

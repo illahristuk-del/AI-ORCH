@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+from opentelemetry.instrumentation.starlette import StarletteInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
 from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.db import make_engine, make_session_factory
@@ -22,6 +24,7 @@ from search_mcp.adapters.logging_config import setup_logging
 from search_mcp.adapters.postgres import PostgresCandidateRepository
 from search_mcp.store import CandidateRepository
 from search_mcp.adapters.tracing import trace_id_var
+from search_mcp.adapters.otel import setup_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +120,8 @@ async def get_candidate(candidate_id: str) -> str:
 
 if __name__ == "__main__":
     setup_logging()
+    setup_tracing("hr mcp")
+
     raw = os.getenv("MCP_TRANSPORT", "stdio")
     if raw not in ("stdio", "streamable-http"):
         raise SystemExit(f"Unknown transport: {raw}")
@@ -125,6 +130,9 @@ if __name__ == "__main__":
         mcp.run(transport="stdio")
     else:
         app = mcp.streamable_http_app()
+
+        StarletteInstrumentor.instrument_app(app)
+        HTTPXClientInstrumentor().instrument()
 
         app.add_middleware(BaseHTTPMiddleware, dispatch=check_token)
 

@@ -15,6 +15,8 @@ from a2a.server.routes import (
 from a2a.server.tasks import InMemoryTaskStore
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
 from hr_agent.card import AGENT_CARD, AGENT_ID, SEARCH_SKILL
 from hr_agent.executor import HRRecruiterExecutor
@@ -22,6 +24,7 @@ from search_mcp.adapters.auth import create_token, verify_token
 from search_mcp.adapters.config import settings
 from search_mcp.adapters.logging_config import setup_logging
 from search_mcp.adapters.tracing import trace_id_var
+from search_mcp.adapters.otel import setup_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +78,10 @@ async def check_token(request: Request, call_next: Any) -> Response:
 
 def main() -> None:
     setup_logging()
+    setup_tracing("hr recruiter")
+
+    FastAPIInstrumentor.instrument_app(app)
+    SQLAlchemyInstrumentor().instrument()
 
     executor = HRRecruiterExecutor(settings.mcp_url, settings.anthropic_api_key)
     handler = DefaultRequestHandler(

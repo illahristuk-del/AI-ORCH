@@ -6,12 +6,15 @@ import jwt
 import uvicorn
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
 from audit.adapters.postgres import PostgresAuditRepository
 from audit.models import AuditEvent
 from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.db import make_engine, make_session_factory
 from search_mcp.adapters.logging_config import setup_logging
+from search_mcp.adapters.otel import setup_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +68,10 @@ async def create_audit(
 
 def main() -> None:
     setup_logging()
+    setup_tracing("audit")
+
+    FastAPIInstrumentor.instrument_app(app)
+    HTTPXClientInstrumentor().instrument()
 
     uvicorn.run(app, host="127.0.0.1", port=13000)
 

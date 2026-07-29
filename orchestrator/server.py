@@ -11,12 +11,15 @@ from a2a.server.routes import (
 from a2a.server.tasks import InMemoryTaskStore
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
 from orchestrator.card import ORCHESTRATOR_CARD
 from orchestrator.executor import OrchestratorExecutor
 from search_mcp.adapters.auth import verify_token
 from search_mcp.adapters.config import settings
 from search_mcp.adapters.logging_config import setup_logging
+from search_mcp.adapters.otel import setup_tracing
 
 app = FastAPI()
 
@@ -40,6 +43,10 @@ async def check_token(request: Request, call_next: Any) -> Response:
 
 def main() -> None:
     setup_logging()
+    setup_tracing("orchestrator")
+
+    FastAPIInstrumentor.instrument_app(app)
+    HTTPXClientInstrumentor().instrument()
 
     executor = OrchestratorExecutor(
         settings.anthropic_api_key,
